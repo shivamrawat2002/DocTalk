@@ -1,4 +1,6 @@
 import pymupdf
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 def load_pdf(file) -> str:
     doc = pymupdf.open(stream=file.read(), filetype="pdf")
     text = ""
@@ -6,11 +8,10 @@ def load_pdf(file) -> str:
         text += page.get_text() or ""
     return text
 
-def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-    return chunks
+
+def chunk_text(text: str) -> list[str]:
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200
+    )
+    return splitter.split_text(text)

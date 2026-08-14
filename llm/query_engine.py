@@ -1,26 +1,33 @@
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 
-def get_answer(query: str, chunks: list[str], api_key: str) -> str:
-    llm = ChatOpenAI(model="gpt-4o", api_key=api_key)
-    
+GPT4O_MINI_INPUT = 0.150 / 1_000_000   # per token
+GPT4O_MINI_OUTPUT = 0.600 / 1_000_000  # per token
+
+def get_answer(query: str, chunks: list[str], api_key: str) -> dict:
+    llm = ChatOpenAI(model="gpt-4o-mini", api_key=api_key)
+
     context = "\n\n".join(chunks[:5])
 
     prompt = ChatPromptTemplate.from_template("""
-<job>
-You are an Legal AI assistant whose task is to help the user answer questions from the context provided.
-You can are not just a ruleb-based system but a smart system which understand user intent and provide the relevant answers.
-</job>
+You are a helpful assistant. Answer using only the context below.
+If the answer is not in the context, say "I couldn't find that in the document."
 
 Context: {context}
 
 Question: {question}
-
-Example:
-I am being accused of false crime how can I defend myself?
-Article 20(3): Protects you from self-incrimination; you cannot be forced to be a witness against yourself and have the absolute right to remain silent.Article 21: Guarantees your right to life and personal liberty, ensuring that you cannot be deprived of freedom except through a fair, just procedure established by law.Article 22: Gives you the right to be informed of the specific grounds of your arrest, consult a legal practitioner of your choice, and be produced before a magistrate within 24 hours.Article 14: Ensures equality before the law and guards against arbitrary, discriminatory state or police action.
 """)
 
     chain = prompt | llm
     response = chain.invoke({"context": context, "question": query})
-    return response.content
+
+    input_tokens = response.usage_metadata["input_tokens"]
+    output_tokens = response.usage_metadata["output_tokens"]
+    cost = (input_tokens * GPT4O_MINI_INPUT) + (output_tokens * GPT4O_MINI_OUTPUT)
+
+    return {
+        "answer": response.content,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "cost": cost
+    }
